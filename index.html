@@ -214,28 +214,28 @@
 
             <div class="form-group">
                 <label class="form-label">Supabase Project URL</label>
-                <input type="text" id="supabase-url" placeholder="https://xyz.supabase.co">
+                <input type="text" id="supabase-url-input" placeholder="https://xyz.supabase.co">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Supabase anon Key</label>
-                <input type="password" id="supabase-key" placeholder="eyJ...">
+                <input type="text" id="supabase-key-input" placeholder="eyJ...">
             </div>
 
             <div class="form-group">
                 <label class="form-label">n8n Webhook URL</label>
-                <input type="text" id="n8n-webhook" placeholder="https://n8n.cloud/webhook/...">
+                <input type="text" id="n8n-webhook-input" placeholder="https://n8n.cloud/webhook/...">
             </div>
 
-            <button class="btn primary" style="width: 100%;" onclick="saveConfig()">Speichern</button>
+            <button class="btn primary" style="width: 100%;" onclick="saveConfigData()">Speichern</button>
         </div>
 
         <div id="main-screen" style="display: none;">
             <div class="nav-tabs">
-                <button class="nav-tab active" onclick="switchTab('learn')">Lernen</button>
-                <button class="nav-tab" onclick="switchTab('add')">Wörter hinzufügen</button>
-                <button class="nav-tab" onclick="switchTab('stats')">Fortschritt</button>
-                <button class="nav-tab" onclick="switchTab('manage')">Verwalten</button>
+                <button class="nav-tab active" onclick="switchTabFunc('learn')">Lernen</button>
+                <button class="nav-tab" onclick="switchTabFunc('add')">Wörter hinzufügen</button>
+                <button class="nav-tab" onclick="switchTabFunc('stats')">Fortschritt</button>
+                <button class="nav-tab" onclick="switchTabFunc('manage')">Verwalten</button>
             </div>
 
             <!-- LEARN -->
@@ -262,11 +262,11 @@
                         </div>
                     </div>
                     <div class="vocab-actions">
-                        <button class="action-btn learned" onclick="markLearned()">Gelernt ✓</button>
-                        <button class="action-btn skip" onclick="nextVocab()">Weiter →</button>
+                        <button class="action-btn learned" onclick="markLearnedFunc()">Gelernt ✓</button>
+                        <button class="action-btn skip" onclick="nextVocabFunc()">Weiter →</button>
                     </div>
                     <div class="controls">
-                        <button class="btn" onclick="prevVocab()">← Zurück</button>
+                        <button class="btn" onclick="prevVocabFunc()">← Zurück</button>
                     </div>
                 </div>
             </div>
@@ -276,14 +276,14 @@
                 <div class="card">
                     <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Wörterliste hinzufügen</div>
                     <div class="info-box">
-                        💡 Gib eine Liste mit deutschen Wörtern ein (kommagetrennt oder zeilenweise). Claude generiert automatisch alles (ein paar Minuten)!
+                        💡 Gib eine Liste mit deutschen Wörtern ein (kommagetrennt oder zeilenweise). Claude generiert automatisch alles!
                     </div>
                     <div class="difficulty-selector" id="add-difficulty-selector"></div>
                     <div id="add-message" class="message"></div>
 
                     <div class="form-group">
                         <label class="form-label">Deutsche Wörter *</label>
-                        <textarea id="input-words" placeholder="die Nachfrage, abfragen, die Qualifikation&#10;derselbe&#10;menschlich&#10;kämpfen (gegen)"></textarea>
+                        <textarea id="input-words-textarea" placeholder="die Nachfrage, abfragen, die Qualifikation&#10;derselbe&#10;menschlich&#10;kämpfen (gegen)"></textarea>
                         <small style="color: #666; display: block; margin-top: 4px;">Kommagetrennt oder zeilenweise eingeben</small>
                     </div>
 
@@ -297,8 +297,8 @@
                     </div>
 
                     <div class="button-group">
-                        <button class="primary" id="generate-btn" onclick="generateWords()"><span class="loading" style="display: none;" id="loading-spinner"></span><span id="btn-text">Mit Claude generieren</span></button>
-                        <button onclick="clearAddForm()">Zurücksetzen</button>
+                        <button class="primary" id="generate-btn" onclick="generateWordsFunc()"><span class="loading" style="display: none;" id="loading-spinner"></span><span id="btn-text">Mit Claude generieren</span></button>
+                        <button onclick="clearAddFormFunc()">Zurücksetzen</button>
                     </div>
                 </div>
             </div>
@@ -309,10 +309,6 @@
                     <div class="stat-card">
                         <div class="stat-value" id="stat-total">0</div>
                         <div class="stat-label">Gesamt gelernt</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-today">0</div>
-                        <div class="stat-label">Heute</div>
                     </div>
                 </div>
                 <div class="card">
@@ -327,7 +323,7 @@
                     <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Verwaltung</div>
                     <div class="difficulty-selector" id="manage-difficulty-selector"></div>
                     <div style="margin-bottom: 16px;">
-                        <button class="btn danger" style="width: 100%;" onclick="deleteAll()">Alle löschen</button>
+                        <button class="btn danger" style="width: 100%;" onclick="deleteAllFunc()">Alle löschen</button>
                     </div>
                     <div id="manage-list"></div>
                 </div>
@@ -336,17 +332,17 @@
     </div>
 
     <script>
-        let supabase;
+        let supabaseClient = null;
         let vocabData = { easy: [], medium: [], hard: [] };
         let currentDifficulty = 'medium';
         let currentIndex = 0;
         let learnedAll = [];
-        let n8nWebhook = '';
+        let n8nWebhookUrl = '';
 
-        function saveConfig() {
-            const url = document.getElementById('supabase-url').value.trim();
-            const key = document.getElementById('supabase-key').value.trim();
-            const webhook = document.getElementById('n8n-webhook').value.trim();
+        function saveConfigData() {
+            const url = document.getElementById('supabase-url-input').value.trim();
+            const key = document.getElementById('supabase-key-input').value.trim();
+            const webhook = document.getElementById('n8n-webhook-input').value.trim();
             
             if (!url || !key || !webhook) {
                 alert('Bitte fülle alle Felder aus');
@@ -357,13 +353,13 @@
             localStorage.setItem('supabaseKey', key);
             localStorage.setItem('n8nWebhook', webhook);
 
-            initSupabase();
+            initSupabaseConnection();
         }
 
-        function initSupabase() {
+        function initSupabaseConnection() {
             const url = localStorage.getItem('supabaseUrl');
             const key = localStorage.getItem('supabaseKey');
-            n8nWebhook = localStorage.getItem('n8nWebhook');
+            n8nWebhookUrl = localStorage.getItem('n8nWebhook');
 
             if (!url || !key) {
                 document.getElementById('setup-screen').style.display = 'block';
@@ -371,17 +367,18 @@
                 return;
             }
 
-            supabase = window.supabase.createClient(url, key);
+            supabaseClient = window.supabase.createClient(url, key);
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('main-screen').style.display = 'block';
-            loadVocabs();
-            initDifficulty('difficulty-selector', 'changeDifficulty');
-            initDifficulty('add-difficulty-selector', 'changeAddDifficulty');
-            initDifficulty('manage-difficulty-selector', 'changeManageDifficulty');
+            loadVocabsData();
+            initDifficultyCards('difficulty-selector', 'changeDifficultyFunc');
+            initDifficultyCards('add-difficulty-selector', 'changeAddDifficultyFunc');
+            initDifficultyCards('manage-difficulty-selector', 'changeManageDifficultyFunc');
         }
 
-        async function loadVocabs() {
-            const { data, error } = await supabase.from('vocabs').select('*');
+        async function loadVocabsData() {
+            if (!supabaseClient) return;
+            const { data, error } = await supabaseClient.from('vocabs').select('*');
             if (error) {
                 console.error('Error loading vocabs:', error);
                 return;
@@ -395,10 +392,10 @@
                 }
             });
 
-            updateLearnView();
+            updateLearnViewFunc();
         }
 
-        function initDifficulty(elementId, callback) {
+        function initDifficultyCards(elementId, callback) {
             const html = [
                 { key: 'easy', name: 'Anfänger', emoji: '🟢' },
                 { key: 'medium', name: 'Mittelstufe', emoji: '🟡' },
@@ -412,25 +409,25 @@
             document.getElementById(elementId).innerHTML = html;
         }
 
-        function changeDifficulty(difficulty) {
+        function changeDifficultyFunc(difficulty) {
             currentDifficulty = difficulty;
             currentIndex = 0;
-            updateLearnView();
-            initDifficulty('difficulty-selector', 'changeDifficulty');
+            updateLearnViewFunc();
+            initDifficultyCards('difficulty-selector', 'changeDifficultyFunc');
         }
 
-        function changeAddDifficulty(difficulty) {
+        function changeAddDifficultyFunc(difficulty) {
             currentDifficulty = difficulty;
-            initDifficulty('add-difficulty-selector', 'changeAddDifficulty');
+            initDifficultyCards('add-difficulty-selector', 'changeAddDifficultyFunc');
         }
 
-        function changeManageDifficulty(difficulty) {
+        function changeManageDifficultyFunc(difficulty) {
             currentDifficulty = difficulty;
-            updateManageView();
-            initDifficulty('manage-difficulty-selector', 'changeManageDifficulty');
+            updateManageViewFunc();
+            initDifficultyCards('manage-difficulty-selector', 'changeManageDifficultyFunc');
         }
 
-        function updateLearnView() {
+        function updateLearnViewFunc() {
             const vocabs = vocabData[currentDifficulty];
             const noMsg = document.getElementById('no-vocab-message');
             const content = document.getElementById('learn-content');
@@ -442,11 +439,11 @@
             } else {
                 noMsg.style.display = 'none';
                 content.style.display = 'block';
-                showVocab();
+                showVocabFunc();
             }
         }
 
-        function showVocab() {
+        function showVocabFunc() {
             const vocabs = vocabData[currentDifficulty];
             if (vocabs.length === 0) return;
             const v = vocabs[currentIndex];
@@ -459,39 +456,40 @@
             document.getElementById('vocab-count').textContent = `${currentIndex + 1} / ${vocabs.length}`;
         }
 
-        function nextVocab() {
+        function nextVocabFunc() {
             const vocabs = vocabData[currentDifficulty];
             currentIndex = (currentIndex + 1) % vocabs.length;
-            showVocab();
+            showVocabFunc();
         }
 
-        function prevVocab() {
+        function prevVocabFunc() {
             const vocabs = vocabData[currentDifficulty];
             currentIndex = currentIndex > 0 ? currentIndex - 1 : vocabs.length - 1;
-            showVocab();
+            showVocabFunc();
         }
 
-        async function markLearned() {
+        async function markLearnedFunc() {
             const v = vocabData[currentDifficulty][currentIndex];
-            await supabase.from('learned').insert({
-                word: v.word,
-                learned_date: new Date()
-            });
-            nextVocab();
+            if (supabaseClient) {
+                await supabaseClient.from('learned').insert({
+                    word: v.word,
+                    learned_date: new Date()
+                });
+            }
+            nextVocabFunc();
         }
 
-        async function generateWords() {
-            const input = document.getElementById('input-words').value.trim();
+        async function generateWordsFunc() {
+            const input = document.getElementById('input-words-textarea').value.trim();
             if (!input) {
-                showMessage('Bitte gib mindestens ein Wort ein', 'error', 'add-message');
+                showMessageFunc('Bitte gib mindestens ein Wort ein', 'error', 'add-message');
                 return;
             }
 
-            // Parse Wörter (kommagetrennt oder zeilenweise)
             let words = input.split(/[,\n]/).map(w => w.trim()).filter(w => w.length > 0);
             
             if (words.length === 0) {
-                showMessage('Keine gültigen Wörter gefunden', 'error', 'add-message');
+                showMessageFunc('Keine gültigen Wörter gefunden', 'error', 'add-message');
                 return;
             }
 
@@ -508,14 +506,14 @@
             document.getElementById('progress-total').textContent = words.length;
 
             let successCount = 0;
-            showMessage(`⏳ Generiere ${words.length} Wörter... (das dauert ein paar Minuten)`, 'info', 'add-message');
+            showMessageFunc(`⏳ Generiere ${words.length} Wörter... (das dauert ein paar Minuten)`, 'info', 'add-message');
 
             try {
                 for (let i = 0; i < words.length; i++) {
                     const word = words[i];
                     
                     try {
-                        const response = await fetch(n8nWebhook, {
+                        const response = await fetch(n8nWebhookUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -528,7 +526,6 @@
                             successCount++;
                         }
 
-                        // Update Progress
                         document.getElementById('progress-current').textContent = successCount;
                         const percentage = (successCount / words.length) * 100;
                         document.getElementById('progress-fill').style.width = percentage + '%';
@@ -537,21 +534,20 @@
                         console.error(`Fehler bei "${word}":`, error);
                     }
 
-                    // Kurze Pause zwischen Requests
                     await new Promise(r => setTimeout(r, 500));
                 }
 
                 if (successCount > 0) {
-                    showMessage(`✓ ${successCount}/${words.length} Wörter erfolgreich generiert!`, 'success', 'add-message');
-                    document.getElementById('input-words').value = '';
+                    showMessageFunc(`✓ ${successCount}/${words.length} Wörter erfolgreich generiert!`, 'success', 'add-message');
+                    document.getElementById('input-words-textarea').value = '';
                     await new Promise(r => setTimeout(r, 1000));
-                    await loadVocabs();
+                    await loadVocabsData();
                 } else {
-                    showMessage('❌ Fehler beim Generieren. Versuche es später erneut.', 'error', 'add-message');
+                    showMessageFunc('❌ Fehler beim Generieren. Versuche es später erneut.', 'error', 'add-message');
                 }
 
             } catch (error) {
-                showMessage('❌ Fehler: ' + error.message, 'error', 'add-message');
+                showMessageFunc('❌ Fehler: ' + error.message, 'error', 'add-message');
             } finally {
                 btn.disabled = false;
                 spinner.style.display = 'none';
@@ -560,11 +556,11 @@
             }
         }
 
-        function clearAddForm() {
-            document.getElementById('input-words').value = '';
+        function clearAddFormFunc() {
+            document.getElementById('input-words-textarea').value = '';
         }
 
-        function updateManageView() {
+        function updateManageViewFunc() {
             const vocabs = vocabData[currentDifficulty];
             const list = document.getElementById('manage-list');
             
@@ -579,29 +575,33 @@
                         <div class="vocab-item-word">${v.word}</div>
                         <div class="vocab-item-info">${v.pos}</div>
                     </div>
-                    <button class="btn-small" onclick="deleteVocab(${v.id})">Löschen</button>
+                    <button class="btn-small" onclick="deleteVocabFunc(${v.id})">Löschen</button>
                 </div>
             `).join('')}</div>`;
         }
 
-        async function deleteVocab(id) {
-            await supabase.from('vocabs').delete().eq('id', id);
-            await loadVocabs();
-        }
-
-        async function deleteAll() {
-            if (confirm('Alle Wörter wirklich löschen?')) {
-                await supabase.from('vocabs').delete().gte('id', 0);
-                await loadVocabs();
+        async function deleteVocabFunc(id) {
+            if (supabaseClient) {
+                await supabaseClient.from('vocabs').delete().eq('id', id);
+                await loadVocabsData();
             }
         }
 
-        function updateStats() {
+        async function deleteAllFunc() {
+            if (confirm('Alle Wörter wirklich löschen?')) {
+                if (supabaseClient) {
+                    await supabaseClient.from('vocabs').delete().gte('id', 0);
+                    await loadVocabsData();
+                }
+            }
+        }
+
+        function updateStatsFunc() {
             document.getElementById('stat-total').textContent = learnedAll.length;
             document.getElementById('learned-list').textContent = learnedAll.length > 0 ? learnedAll.join(', ') : 'Noch keine Wörter gelernt';
         }
 
-        function switchTab(tabName) {
+        function switchTabFunc(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             
@@ -609,20 +609,20 @@
             event.target.classList.add('active');
 
             if (tabName === 'stats') {
-                updateStats();
+                updateStatsFunc();
             } else if (tabName === 'manage') {
-                updateManageView();
+                updateManageViewFunc();
             }
         }
 
-        function showMessage(text, type, elementId) {
+        function showMessageFunc(text, type, elementId) {
             const el = document.getElementById(elementId);
             el.textContent = text;
             el.className = 'message ' + type;
             if (type !== 'info') setTimeout(() => el.className = 'message', 5000);
         }
 
-        initSupabase();
+        initSupabaseConnection();
     </script>
 </body>
 </html>
