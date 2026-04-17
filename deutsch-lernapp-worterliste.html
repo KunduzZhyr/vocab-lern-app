@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#007AFF">
+    <title>Deutsch Lernen - n8n + Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 16px 16px 120px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #666;
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        .nav-tab {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .nav-tab.active {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
+        .difficulty-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .difficulty-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .difficulty-card.active {
+            border-color: #34C759;
+            background: #f0f9f4;
+        }
+        .difficulty-emoji { font-size: 28px; margin-bottom: 6px; }
+        .difficulty-name { font-weight: 500; font-size: 13px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .learn-card {
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .vocab-title { font-size: 40px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+        .vocab-translation { font-size: 18px; color: #007AFF; text-align: center; font-weight: 600; margin-bottom: 12px; }
+        .vocab-pos { font-size: 13px; color: #666; text-align: center; margin-bottom: 12px; font-style: italic; }
+        .vocab-definition { font-size: 15px; background: #f5f5f7; padding: 12px; border-radius: 8px; margin-bottom: 12px; line-height: 1.6; }
+        .vocab-example { margin-bottom: 12px; }
+        .example-label { font-size: 11px; color: #666; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        .example-text { font-size: 14px; font-style: italic; padding-left: 12px; border-left: 2px solid #ddd; }
+        .speaking-angle { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd; }
+        .speaking-label { font-size: 11px; color: #666; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+        .speaking-text { font-size: 14px; line-height: 1.6; }
+        .counter { text-align: center; color: #666; font-size: 13px; margin-bottom: 12px; }
+        .vocab-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+        .action-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .action-btn.learned { background: #34C759; color: white; }
+        .action-btn.skip { background: #FF9500; color: white; }
+        .controls { display: flex; gap: 8px; justify-content: center; }
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn.primary { background: #007AFF; color: white; border-color: #007AFF; }
+        .btn.danger { background: #FF3B30; color: white; border-color: #FF3B30; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus { outline: none; border-color: #007AFF; }
+        textarea { min-height: 150px; resize: vertical; }
+        .button-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        .button-group button { flex: 1; padding: 10px 16px; border: 1px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .button-group button.primary { background: #34C759; color: white; border-color: #34C759; }
+        .message { padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; display: none; font-size: 14px; }
+        .message.success { background: #d4edda; color: #155724; display: block; }
+        .message.error { background: #f8d7da; color: #721c24; display: block; }
+        .message.info { background: #d1ecf1; color: #0c5460; display: block; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #666; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .info-box { background: #e3f2fd; border-left: 4px solid #007AFF; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #1565c0; line-height: 1.6; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 32px; font-weight: 700; color: #007AFF; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
+        .vocab-list { display: flex; flex-direction: column; gap: 8px; }
+        .vocab-item { background: #f5f5f7; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .vocab-item-content { flex: 1; }
+        .vocab-item-word { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .vocab-item-info { font-size: 12px; color: #666; }
+        .btn-small { padding: 4px 12px; background: #FF3B30; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #007AFF;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .setup-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .progress-container {
+            margin-bottom: 12px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #007AFF;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Deutsch Lernen</div>
+            <div class="subtitle">Mit Claude AI + n8n</div>
+        </div>
+
+        <div id="setup-screen" class="setup-screen">
+            <h2>⚙️ Erste Einrichtung</h2>
+            <p style="margin: 16px 0; color: #666;">Trage deine Daten ein:</p>
+            
+            <div class="info-box" style="text-align: left;">
+                <strong>Wo findest du deine Daten:</strong><br><br>
+                <strong>Supabase:</strong> Settings → API (Project URL + anon key)<br>
+                <strong>n8n:</strong> Webhook URL (rechts oben im Workflow)
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Supabase Project URL</label>
+                <input type="text" id="supabase-url" placeholder="https://xyz.supabase.co">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Supabase anon Key</label>
+                <input type="password" id="supabase-key" placeholder="eyJ...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">n8n Webhook URL</label>
+                <input type="text" id="n8n-webhook" placeholder="https://n8n.cloud/webhook/...">
+            </div>
+
+            <button class="btn primary" style="width: 100%;" onclick="saveConfig()">Speichern</button>
+        </div>
+
+        <div id="main-screen" style="display: none;">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('learn')">Lernen</button>
+                <button class="nav-tab" onclick="switchTab('add')">Wörter hinzufügen</button>
+                <button class="nav-tab" onclick="switchTab('stats')">Fortschritt</button>
+                <button class="nav-tab" onclick="switchTab('manage')">Verwalten</button>
+            </div>
+
+            <!-- LEARN -->
+            <div id="learn-tab" class="tab-content active">
+                <div class="difficulty-selector" id="difficulty-selector"></div>
+                <div class="counter"><span id="vocab-count">Lädt...</span></div>
+                <div id="no-vocab-message" class="empty-state" style="display: none;">
+                    <div class="empty-icon">📚</div>
+                    <div>Keine Vokabeln in dieser Stufe</div>
+                </div>
+                <div id="learn-content" style="display: none;">
+                    <div class="card learn-card">
+                        <div class="vocab-title" id="vocab-word"></div>
+                        <div class="vocab-translation" id="vocab-translation"></div>
+                        <div class="vocab-pos" id="vocab-pos"></div>
+                        <div class="vocab-definition" id="vocab-def"></div>
+                        <div class="vocab-example">
+                            <div class="example-label">Beispielsatz</div>
+                            <div class="example-text" id="vocab-example"></div>
+                        </div>
+                        <div class="speaking-angle">
+                            <div class="speaking-label">Sprechaufgabe</div>
+                            <div class="speaking-text" id="vocab-speaking"></div>
+                        </div>
+                    </div>
+                    <div class="vocab-actions">
+                        <button class="action-btn learned" onclick="markLearned()">Gelernt ✓</button>
+                        <button class="action-btn skip" onclick="nextVocab()">Weiter →</button>
+                    </div>
+                    <div class="controls">
+                        <button class="btn" onclick="prevVocab()">← Zurück</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADD WORDS -->
+            <div id="add-tab" class="tab-content">
+                <div class="card">
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Wörterliste hinzufügen</div>
+                    <div class="info-box">
+                        💡 Gib eine Liste mit deutschen Wörtern ein (kommagetrennt oder zeilenweise). Claude generiert automatisch alles (ein paar Minuten)!
+                    </div>
+                    <div class="difficulty-selector" id="add-difficulty-selector"></div>
+                    <div id="add-message" class="message"></div>
+
+                    <div class="form-group">
+                        <label class="form-label">Deutsche Wörter *</label>
+                        <textarea id="input-words" placeholder="die Nachfrage, abfragen, die Qualifikation&#10;derselbe&#10;menschlich&#10;kämpfen (gegen)"></textarea>
+                        <small style="color: #666; display: block; margin-top: 4px;">Kommagetrennt oder zeilenweise eingeben</small>
+                    </div>
+
+                    <div id="progress-container" class="progress-container" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progress-current">0</span> / <span id="progress-total">0</span> Wörter generiert
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="primary" id="generate-btn" onclick="generateWords()"><span class="loading" style="display: none;" id="loading-spinner"></span><span id="btn-text">Mit Claude generieren</span></button>
+                        <button onclick="clearAddForm()">Zurücksetzen</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS -->
+            <div id="stats-tab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Gesamt gelernt</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-today">0</div>
+                        <div class="stat-label">Heute</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Gelernte Wörter</div>
+                    <div id="learned-list" style="font-size: 14px; line-height: 1.8;"></div>
+                </div>
+            </div>
+
+            <!-- MANAGE -->
+            <div id="manage-tab" class="tab-content">
+                <div class="card">
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">Verwaltung</div>
+                    <div class="difficulty-selector" id="manage-difficulty-selector"></div>
+                    <div style="margin-bottom: 16px;">
+                        <button class="btn danger" style="width: 100%;" onclick="deleteAll()">Alle löschen</button>
+                    </div>
+                    <div id="manage-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabase;
+        let vocabData = { easy: [], medium: [], hard: [] };
+        let currentDifficulty = 'medium';
+        let currentIndex = 0;
+        let learnedAll = [];
+        let n8nWebhook = '';
+
+        function saveConfig() {
+            const url = document.getElementById('supabase-url').value.trim();
+            const key = document.getElementById('supabase-key').value.trim();
+            const webhook = document.getElementById('n8n-webhook').value.trim();
+            
+            if (!url || !key || !webhook) {
+                alert('Bitte fülle alle Felder aus');
+                return;
+            }
+
+            localStorage.setItem('supabaseUrl', url);
+            localStorage.setItem('supabaseKey', key);
+            localStorage.setItem('n8nWebhook', webhook);
+
+            initSupabase();
+        }
+
+        function initSupabase() {
+            const url = localStorage.getItem('supabaseUrl');
+            const key = localStorage.getItem('supabaseKey');
+            n8nWebhook = localStorage.getItem('n8nWebhook');
+
+            if (!url || !key) {
+                document.getElementById('setup-screen').style.display = 'block';
+                document.getElementById('main-screen').style.display = 'none';
+                return;
+            }
+
+            supabase = window.supabase.createClient(url, key);
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'block';
+            loadVocabs();
+            initDifficulty('difficulty-selector', 'changeDifficulty');
+            initDifficulty('add-difficulty-selector', 'changeAddDifficulty');
+            initDifficulty('manage-difficulty-selector', 'changeManageDifficulty');
+        }
+
+        async function loadVocabs() {
+            const { data, error } = await supabase.from('vocabs').select('*');
+            if (error) {
+                console.error('Error loading vocabs:', error);
+                return;
+            }
+
+            vocabData = { easy: [], medium: [], hard: [] };
+            data.forEach(v => {
+                const difficulty = v.difficulty || 'medium';
+                if (vocabData[difficulty]) {
+                    vocabData[difficulty].push(v);
+                }
+            });
+
+            updateLearnView();
+        }
+
+        function initDifficulty(elementId, callback) {
+            const html = [
+                { key: 'easy', name: 'Anfänger', emoji: '🟢' },
+                { key: 'medium', name: 'Mittelstufe', emoji: '🟡' },
+                { key: 'hard', name: 'Fortgeschritten', emoji: '🔴' }
+            ].map(d => `
+                <div class="difficulty-card ${d.key === currentDifficulty ? 'active' : ''}" onclick="${callback}('${d.key}')">
+                    <div class="difficulty-emoji">${d.emoji}</div>
+                    <div class="difficulty-name">${d.name}</div>
+                </div>
+            `).join('');
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function changeDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            currentIndex = 0;
+            updateLearnView();
+            initDifficulty('difficulty-selector', 'changeDifficulty');
+        }
+
+        function changeAddDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            initDifficulty('add-difficulty-selector', 'changeAddDifficulty');
+        }
+
+        function changeManageDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            updateManageView();
+            initDifficulty('manage-difficulty-selector', 'changeManageDifficulty');
+        }
+
+        function updateLearnView() {
+            const vocabs = vocabData[currentDifficulty];
+            const noMsg = document.getElementById('no-vocab-message');
+            const content = document.getElementById('learn-content');
+
+            if (vocabs.length === 0) {
+                noMsg.style.display = 'block';
+                content.style.display = 'none';
+                document.getElementById('vocab-count').textContent = 'Keine Vokabeln';
+            } else {
+                noMsg.style.display = 'none';
+                content.style.display = 'block';
+                showVocab();
+            }
+        }
+
+        function showVocab() {
+            const vocabs = vocabData[currentDifficulty];
+            if (vocabs.length === 0) return;
+            const v = vocabs[currentIndex];
+            document.getElementById('vocab-word').textContent = v.word;
+            document.getElementById('vocab-translation').textContent = v.translation || '';
+            document.getElementById('vocab-pos').textContent = v.pos;
+            document.getElementById('vocab-def').textContent = v.definition;
+            document.getElementById('vocab-example').textContent = v.example;
+            document.getElementById('vocab-speaking').textContent = v.speaking;
+            document.getElementById('vocab-count').textContent = `${currentIndex + 1} / ${vocabs.length}`;
+        }
+
+        function nextVocab() {
+            const vocabs = vocabData[currentDifficulty];
+            currentIndex = (currentIndex + 1) % vocabs.length;
+            showVocab();
+        }
+
+        function prevVocab() {
+            const vocabs = vocabData[currentDifficulty];
+            currentIndex = currentIndex > 0 ? currentIndex - 1 : vocabs.length - 1;
+            showVocab();
+        }
+
+        async function markLearned() {
+            const v = vocabData[currentDifficulty][currentIndex];
+            await supabase.from('learned').insert({
+                word: v.word,
+                learned_date: new Date()
+            });
+            nextVocab();
+        }
+
+        async function generateWords() {
+            const input = document.getElementById('input-words').value.trim();
+            if (!input) {
+                showMessage('Bitte gib mindestens ein Wort ein', 'error', 'add-message');
+                return;
+            }
+
+            // Parse Wörter (kommagetrennt oder zeilenweise)
+            let words = input.split(/[,\n]/).map(w => w.trim()).filter(w => w.length > 0);
+            
+            if (words.length === 0) {
+                showMessage('Keine gültigen Wörter gefunden', 'error', 'add-message');
+                return;
+            }
+
+            const btn = document.getElementById('generate-btn');
+            const spinner = document.getElementById('loading-spinner');
+            const btnText = document.getElementById('btn-text');
+            const progressContainer = document.getElementById('progress-container');
+            
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            btnText.textContent = 'Generiere...';
+            progressContainer.style.display = 'block';
+
+            document.getElementById('progress-total').textContent = words.length;
+
+            let successCount = 0;
+            showMessage(`⏳ Generiere ${words.length} Wörter... (das dauert ein paar Minuten)`, 'info', 'add-message');
+
+            try {
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    
+                    try {
+                        const response = await fetch(n8nWebhook, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                word,
+                                difficulty: currentDifficulty
+                            })
+                        });
+
+                        if (response.ok) {
+                            successCount++;
+                        }
+
+                        // Update Progress
+                        document.getElementById('progress-current').textContent = successCount;
+                        const percentage = (successCount / words.length) * 100;
+                        document.getElementById('progress-fill').style.width = percentage + '%';
+
+                    } catch (error) {
+                        console.error(`Fehler bei "${word}":`, error);
+                    }
+
+                    // Kurze Pause zwischen Requests
+                    await new Promise(r => setTimeout(r, 500));
+                }
+
+                if (successCount > 0) {
+                    showMessage(`✓ ${successCount}/${words.length} Wörter erfolgreich generiert!`, 'success', 'add-message');
+                    document.getElementById('input-words').value = '';
+                    await new Promise(r => setTimeout(r, 1000));
+                    await loadVocabs();
+                } else {
+                    showMessage('❌ Fehler beim Generieren. Versuche es später erneut.', 'error', 'add-message');
+                }
+
+            } catch (error) {
+                showMessage('❌ Fehler: ' + error.message, 'error', 'add-message');
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = 'Mit Claude generieren';
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        function clearAddForm() {
+            document.getElementById('input-words').value = '';
+        }
+
+        function updateManageView() {
+            const vocabs = vocabData[currentDifficulty];
+            const list = document.getElementById('manage-list');
+            
+            if (vocabs.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Keine Wörter</div>';
+                return;
+            }
+
+            list.innerHTML = `<div class="vocab-list">${vocabs.map((v, i) => `
+                <div class="vocab-item">
+                    <div class="vocab-item-content">
+                        <div class="vocab-item-word">${v.word}</div>
+                        <div class="vocab-item-info">${v.pos}</div>
+                    </div>
+                    <button class="btn-small" onclick="deleteVocab(${v.id})">Löschen</button>
+                </div>
+            `).join('')}</div>`;
+        }
+
+        async function deleteVocab(id) {
+            await supabase.from('vocabs').delete().eq('id', id);
+            await loadVocabs();
+        }
+
+        async function deleteAll() {
+            if (confirm('Alle Wörter wirklich löschen?')) {
+                await supabase.from('vocabs').delete().gte('id', 0);
+                await loadVocabs();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').textContent = learnedAll.length;
+            document.getElementById('learned-list').textContent = learnedAll.length > 0 ? learnedAll.join(', ') : 'Noch keine Wörter gelernt';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'stats') {
+                updateStats();
+            } else if (tabName === 'manage') {
+                updateManageView();
+            }
+        }
+
+        function showMessage(text, type, elementId) {
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = 'message ' + type;
+            if (type !== 'info') setTimeout(() => el.className = 'message', 5000);
+        }
+
+        initSupabase();
+    </script>
+</body>
+</html>
