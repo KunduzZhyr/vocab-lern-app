@@ -608,11 +608,13 @@
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
 
-            if (tabName === 'stats') {
+            if (tabName === 'learn') {
+                loadVocabsData();
+            } else if (tabName === 'stats') {
                 updateStatsFunc();
             } else if (tabName === 'manage') {
                 updateManageViewFunc();
-            }
+   }
         }
 
         function showMessageFunc(text, type, elementId) {
